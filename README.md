@@ -1,1 +1,1 @@
-# telegram-game
+# TG-bot

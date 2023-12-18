@@ -1,0 +1,27 @@
+[
+  {
+    "userId": 6917175855,
+    "privateKey": "3c9c1c35cf90da068f6196c524155cc9fbfcebe8be98b837d8e64cd15d4d444c",
+    "wallet": {
+      "provider": null,
+      "address": "0x50C3815284987B8072788825D276e69392E36FB9"
+    }
+  },
+  {
+    "userId": 6788949369,
+    "privateKey": "f1fcd86c6560a85a8996daa1745c59edb7d3b1c7735e464552c067032a6d881e",
+    "wallet": {
+      "provider": null,
+      "address": "0xA75566f3eDD2D2eea92033F5cA16aEE5BAd70162"
+    }
+  },
+  {
+    "userId": 6677936175,
+    "userName": "sasuke310",
+    "privateKey": "46d01f69c409d038b9488be0879321f5c1db12122907446659b65b78f1453a80",
+    "wallet": {
+      "provider": null,
+      "address": "0xceE076Ca9FBDBDBd7f72cf474dB6300961AEF14D"
+    }
+  }
+]
