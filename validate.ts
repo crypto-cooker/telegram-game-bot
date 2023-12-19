@@ -4,7 +4,8 @@ export const ValidateWalletPrivateKey = (address: string) => {
 
 export const playerValidation = (userName: string, player: string[]) => {
   try {
-    if (player.find((user) => user === userName)) {
+    const fetchUser = "@" + userName;
+    if (player.find((user) => user === fetchUser)) {
       return false;
     } else {
       return true;

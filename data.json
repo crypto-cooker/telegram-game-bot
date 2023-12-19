@@ -23,5 +23,14 @@
       "provider": null,
       "address": "0xceE076Ca9FBDBDBd7f72cf474dB6300961AEF14D"
     }
+  },
+  {
+    "userId": 6557559248,
+    "userName": "jjames0116",
+    "privateKey": "3c9c1c35cf90da068f6196c524155cc9fbfcebe8be98b837d8e64cd15d4d444c",
+    "wallet": {
+      "provider": null,
+      "address": "0x50C3815284987B8072788825D276e69392E36FB9"
+    }
   }
 ]
