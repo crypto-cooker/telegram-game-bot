@@ -31,6 +31,10 @@ import {
   getPrize,
   initialChamber,
   passToNext,
+  payForD2R,
+  payForJoin,
+  payForMe,
+  payForWinner,
   pullTrigger,
   removeLoser,
   spinCylinder,
@@ -53,6 +57,7 @@ app.listen(port, () => {
 const botToken = process.env.TG_TOKEN;
 const buyChannel = process.env.BUY_CHANNEL;
 const mainChannel = process.env.FUND_CHANNEL;
+const address = process.env.ADDRESS;
 
 const ControlInfo: { [key: number]: CuponControlInfo } = {};
 const MessageStateInfo: { [key: number]: StateInfo } = {};
@@ -70,23 +75,24 @@ const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli/");
 let getUser: any;
 let channelId: any;
 let players: any;
-let cost: any;
+let cost: number;
 let losers: number;
 
 let player: string[] = [];
-const isPullTrigger = true;
-const isPass = true;
+let isPullTrigger = true;
+let isPass = true;
+let isSpin = true;
 const chambers: boolean[] = [];
 let currentChamberIndex = 0;
 let turn = 0;
 let count = 0;
-const gameButtons = [
-  [
-    { text: "Pull Trigger", callback_data: "shot" },
-    { text: "Pass", callback_data: "pass" },
-    { text: "Spin Chamber", callback_data: "spin" },
-  ],
-];
+// const gameButtons = [
+//   [
+// { text: "Pull Trigger", callback_data: "shot" },
+// { text: "Pass", callback_data: "pass" },
+// { text: "Spin Chamber", callback_data: "spin" },
+//   ],
+// ];
 app.post("/fund", (req, res) => {
   try {
     bot.sendMessage(
@@ -240,9 +246,12 @@ bot.on("message", async (msg: Message) => {
 bot.on("callback_query", async (query: CallbackQuery) => {
   const chatId = query.message?.chat.id;
   const messageId = query.message?.message_id;
+
   const [action] = query.data!.split(" ");
   const username = query.from.username;
+  const userId = query.from.id;
   let sentMsg;
+  const userData = fetchDataFromJSONFile(userId);
 
   switch (action) {
     case "setup_wallet":
@@ -251,132 +260,379 @@ bot.on("callback_query", async (query: CallbackQuery) => {
       bot.sendMessage(chatId!, "Please, Input your wallet private key!");
       break;
     case "join_game":
-      const isPlayer = playerValidation(username!, player);
-      console.log("username", username, isPlayer, player);
-      if (username && isPlayer) {
-        player.push(`@${username}`);
-        if (player.length <= players) {
-          bot.editMessageText(
-            `${player[0]}'s Game\n 🎮 Created Game!\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n😞 Losers: ${losers}\n Joined Player: ${player}`,
-            {
-              chat_id: chatId,
-              message_id: messageId,
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "Join", callback_data: `join_game` }],
-                ],
-              },
-            }
-          );
-          if (player.length === players) {
-            bot.editMessageText(
-              `${player[0]}'s Game\n 🎮 Created Game!\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n😞 Losers: ${losers}\n Joined Player: ${player}\n All players already joined`,
-              {
-                chat_id: chatId,
-                message_id: messageId,
-              }
+      // console.log("play,", isPlayer);
+      if (username) {
+        const isPlayer = playerValidation(username!, player);
+        if (!isPlayer) {
+          bot.sendMessage(chatId!, `@${username}! You already Joined!`);
+        } else {
+          const pay = payForJoin(userData?.privateKey!, address, cost);
+          if (!pay) {
+            bot.sendMessage(
+              chatId!,
+              `@${username}! You can't join game, because not enough ETH. Please charge ETH in your Wallet`
             );
-            turn = getFirstPlayer(players);
-            const isBullet = initialChamber(chambers);
-            if (isBullet) {
-              bot.sendMessage(
-                chatId!,
-                `Playing Game\n Bullet was placed\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
-                  player[turn - 1]
-                }! Your turn`,
+          } else {
+            player.push(`@${username}`);
+            if (player.length <= players) {
+              bot.editMessageText(
+                `${player[0]}'s Game\n 🎮 Created Game!\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n😞 Losers: ${losers}\n Joined Player: ${player}`,
                 {
-                  reply_markup: { inline_keyboard: gameButtons },
+                  chat_id: chatId,
+                  message_id: messageId,
+                  reply_markup: {
+                    inline_keyboard: [
+                      [{ text: "Join", callback_data: `join_game` }],
+                    ],
+                  },
                 }
               );
-            } else {
-              bot.sendMessage(
-                chatId!,
-                `Playing Game\n Bullet is in Cylinder already \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
-                  player[turn - 1]
-                }! Your turn`,
-                {
-                  reply_markup: { inline_keyboard: gameButtons },
+              if (player.length === players) {
+                bot.editMessageText(
+                  `${player[0]}'s Game\n 🎮 Created Game!\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n😞 Losers: ${losers}\n Joined Player: ${player}\n All players already joined`,
+                  {
+                    chat_id: chatId,
+                    message_id: messageId,
+                  }
+                );
+                turn = getFirstPlayer(players);
+                const isBullet = initialChamber(chambers);
+                if (isBullet) {
+                  bot.sendDocument(
+                    chatId!,
+                    "https://media.tenor.com/WBnU-Ltt26UAAAAM/it-starts-now-bebe-rexha.gif",
+                    {
+                      caption: `Playing Game\n Bullet was placed\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                        player[turn - 1]
+                      }! Your turn`,
+                      reply_markup: {
+                        inline_keyboard: [
+                          [
+                            { text: "Pull Trigger", callback_data: "shot" },
+                            { text: "Pass", callback_data: "pass" },
+                            { text: "Spin Chamber", callback_data: "spin" },
+                          ],
+                        ],
+                      },
+                    }
+                  );
+                } else {
+                  bot.sendDocument(
+                    chatId!,
+                    "https://media.tenor.com/WBnU-Ltt26UAAAAM/it-starts-now-bebe-rexha.gif",
+
+                    {
+                      caption: `Playing Game\n Bullet is in Cylinder already \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                        player[turn - 1]
+                      }! Your turn`,
+                      reply_markup: {
+                        inline_keyboard: [
+                          [
+                            { text: "Pull Trigger", callback_data: "shot" },
+                            { text: "Pass", callback_data: "pass" },
+                            { text: "Spin Chamber", callback_data: "spin" },
+                          ],
+                        ],
+                      },
+                    }
+                  );
                 }
-              );
+              }
             }
           }
         }
-      } else {
-        bot.sendMessage(chatId!, `@${username}! You already Joined!`);
       }
       break;
     case "shot":
       const nPlayer = passToNext(turn, players);
-      console.log(turn, nPlayer);
       const fired = pullTrigger(chambers, currentChamberIndex);
-      currentChamberIndex++;
-      console.log("chambers", chambers, currentChamberIndex);
+      currentChamberIndex = fired.currentChamberIndex;
+      // const replyMarkup: any = {
+      //   inline_keyboard: [[{ text: "Pull Trigger", callback_data: "shot" }]],
+      // };
 
-      if (fired) {
-        bot.sendMessage(
-          chatId!,
-          `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
-            player[turn - 1]
-          } You died💀\n ${player[nPlayer - 1]}! Your turn`,
-          {
-            reply_markup: { inline_keyboard: gameButtons },
-          }
-        );
-        count++;
-        console.log("losers, count", losers, count);
-        player = removeLoser(player[turn - 1], player);
-        if (losers === count) {
-          const reward = getPrize(cost, players);
-          bot.sendMessage(
+      // if (isSpin) {
+      //   replyMarkup.inline_keyboard.push({
+      //     text: "Spin Chamber",
+      //     callback_data: "spin",
+      //   });
+      // } else {
+      //   replyMarkup.inline_keyboard.push({
+      //     text: "Pass",
+      //     callback_data: "pass",
+      //   });
+      // }
+
+      // if (isPass) {
+      //   replyMarkup.inline_keyboard.push({
+      //     text: "Pass",
+      //     callback_data: "pass",
+      //   });
+      // } else {
+      //   replyMarkup.inline_keyboard.push({
+      //     text: "Spin Chamber",
+      //     callback_data: "spin",
+      //   });
+      // }
+
+      if (fired.bulletFired) {
+        if (isSpin && isPass) {
+          bot.sendDocument(
             chatId!,
-            `Game Finished\n 🎊🎊Congratulation🎉🎉 \n🤹‍♂️ Winners: ${player}\n🤑 Prize: Each player get $${reward}\n `
+            "https://tenor.com/view/dead-x_x-dies-gif-24040993",
+            {
+              caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                player[turn - 1]
+              } You died💀\n ${player[nPlayer - 1]}! Your turn`,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "Pull Trigger", callback_data: "shot" },
+                    { text: "Pass", callback_data: "pass" },
+                    { text: "Spin Chamber", callback_data: "spin" },
+                  ],
+                ],
+              },
+            }
+          );
+        } else if (!isSpin) {
+          bot.sendDocument(
+            chatId!,
+            "https://tenor.com/view/dead-x_x-dies-gif-24040993",
+            {
+              caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                player[turn - 1]
+              } You died💀\n ${player[nPlayer - 1]}! Your turn`,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "Pull Trigger", callback_data: "shot" },
+                    { text: "Pass", callback_data: "pass" },
+                  ],
+                ],
+              },
+            }
+          );
+        } else if (!isPass) {
+          bot.sendDocument(
+            chatId!,
+            "https://tenor.com/view/dead-x_x-dies-gif-24040993",
+            {
+              caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                player[turn - 1]
+              } You died💀\n ${player[nPlayer - 1]}! Your turn`,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "Pull Trigger", callback_data: "shot" },
+                    { text: "Spin Chamber", callback_data: "spin" },
+                  ],
+                ],
+              },
+            }
           );
         }
+        if (!isPass && !isSpin) {
+          bot.sendDocument(
+            chatId!,
+            "https://tenor.com/view/dead-x_x-dies-gif-24040993",
+            {
+              caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                player[turn - 1]
+              } You died💀\n ${player[nPlayer - 1]}! Your turn`,
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Pull Trigger", callback_data: "shot" }],
+                ],
+              },
+            }
+          );
+        }
+
+        count++;
+        player = removeLoser(player[turn - 1], player);
+        if (losers === count) {
+          const reward = getPrize(cost, players - losers);
+          const paid = payForWinner(player, reward.prize);
+          payForMe(reward.mine);
+          payForD2R(reward.toVault);
+          bot.sendDocument(
+            chatId!,
+            "https://media.tenor.com/7EHHRFTVMYcAAAAM/congrats-congratulation.gif",
+            {
+              caption: `Game Finished\n 🎊🎊Congratulation🎉🎉 \n🤹‍♂️ Winners: ${player}\n🤑 Prize: Each player get $${reward.prize}\n`,
+            }
+          );
+          count = 0;
+          emptyCylinder(chambers);
+          isSpin = true;
+          isPass = true;
+        }
       } else {
-        bot.sendMessage(
-          chatId!,
-          `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
-            player[turn - 1]
-          } You are alive 😓\n ${player[nPlayer - 1]}! Your turn`,
-          {
-            reply_markup: { inline_keyboard: gameButtons },
-          }
-        );
+        console.log("shot", isSpin, isPass);
+        if (isSpin && isPass) {
+          console.log("all");
+          bot.sendDocument(
+            chatId!,
+            "https://media.tenor.com/FnRpM31R4KQAAAAj/i-exist-steve-terreberry.gif",
+            {
+              caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                player[turn - 1]
+              } You are alive 😓\n ${player[nPlayer - 1]}! Your turn`,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "Pull Trigger", callback_data: "shot" },
+                    { text: "Pass", callback_data: "pass" },
+                    { text: "Spin Chamber", callback_data: "spin" },
+                  ],
+                ],
+              },
+            }
+          );
+        } else if (!isSpin) {
+          console.log("spin");
+
+          bot.sendDocument(
+            chatId!,
+            "https://media.tenor.com/FnRpM31R4KQAAAAj/i-exist-steve-terreberry.gif",
+            {
+              caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                player[turn - 1]
+              } You are alive 😓\n ${player[nPlayer - 1]}! Your turn`,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "Pull Trigger", callback_data: "shot" },
+                    { text: "Pass", callback_data: "pass" },
+                  ],
+                ],
+              },
+            }
+          );
+        } else if (!isPass) {
+          console.log("pass");
+
+          bot.sendDocument(
+            chatId!,
+            "https://media.tenor.com/FnRpM31R4KQAAAAj/i-exist-steve-terreberry.gif",
+            {
+              caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                player[turn - 1]
+              } You are alive 😓\n ${player[nPlayer - 1]}! Your turn`,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "Pull Trigger", callback_data: "shot" },
+                    { text: "Spin Chamber", callback_data: "spin" },
+                  ],
+                ],
+              },
+            }
+          );
+        }
+        if (!isPass && !isSpin) {
+          console.log("all----");
+
+          bot.sendDocument(
+            chatId!,
+            "https://media.tenor.com/FnRpM31R4KQAAAAj/i-exist-steve-terreberry.gif",
+            {
+              caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                player[turn - 1]
+              } You are alive 😓\n ${player[nPlayer - 1]}! Your turn`,
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Pull Trigger", callback_data: "shot" }],
+                ],
+              },
+            }
+          );
+        }
       }
       turn = passToNext(turn, players);
       break;
     case "pass":
       const pass = passToNext(turn, players);
-      console.log(turn, pass);
-      console.log("chambers", chambers);
 
-      bot.sendMessage(
-        chatId!,
-        `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
-          player[turn - 1]
-        } You pass to Next💀\n ${player[pass - 1]}! Your turn`,
-        {
-          reply_markup: { inline_keyboard: gameButtons },
-        }
-      );
+      if (!isSpin) {
+        bot.sendDocument(
+          chatId!,
+          "https://media.tenor.com/PKMDQ8BwSWkAAAAM/thanks-thanku.gif",
+          {
+            caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+              player[turn - 1]
+            } You pass to Next\n ${player[pass - 1]}! Your turn`,
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "Pull Trigger", callback_data: "shot" }],
+              ],
+            },
+          }
+        );
+      } else {
+        bot.sendDocument(
+          chatId!,
+          "https://media.tenor.com/PKMDQ8BwSWkAAAAM/thanks-thanku.gif",
+          {
+            caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+              player[turn - 1]
+            } You pass to Next\n ${player[pass - 1]}! Your turn`,
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: "Pull Trigger", callback_data: "shot" },
+                  { text: "Spin Chamber", callback_data: "spin" },
+                ],
+              ],
+            },
+          }
+        );
+      }
       turn = passToNext(turn, players);
+      isPass = false;
       break;
     case "spin":
       const next = passToNext(turn, players);
-      console.log(turn, next);
       currentChamberIndex = spinCylinder(chambers);
-      console.log("chambers", chambers);
 
-      bot.sendMessage(
-        chatId!,
-        `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
-          player[turn - 1]
-        } You wildly spin the cylinder \n ${player[next - 1]}! Your turn`,
-        {
-          reply_markup: { inline_keyboard: gameButtons },
-        }
-      );
+      if (!isPass) {
+        bot.sendDocument(
+          chatId!,
+          "https://tenor.com/view/russian-roulette-gun-gif-24197229",
+          {
+            caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+              player[turn - 1]
+            } You wildly spin the cylinder \n ${player[next - 1]}! Your turn`,
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "Pull Trigger", callback_data: "shot" }],
+              ],
+            },
+          }
+        );
+      } else {
+        bot.sendDocument(
+          chatId!,
+          "https://tenor.com/view/russian-roulette-gun-gif-24197229",
+          {
+            caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+              player[turn - 1]
+            } You wildly spin the cylinder \n ${player[next - 1]}! Your turn`,
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: "Pull Trigger", callback_data: "shot" },
+                  { text: "Pass", callback_data: "pass" },
+                ],
+              ],
+            },
+          }
+        );
+      }
+
       turn = passToNext(turn, players);
+      isSpin = false;
       break;
     case "mint_cupon":
       // Mint cupon using cupon ID
@@ -568,7 +824,6 @@ bot.on("message", async (msg: Message) => {
   const userId = msg.chat.username;
   const check = ValidateWalletPrivateKey(msg.text!);
 
-  console.log("ok", chatId);
   if (userId === msg.from?.username) {
     if (check) {
       const wallet = new Wallet(msg.text!);
