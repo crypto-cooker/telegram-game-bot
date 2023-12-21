@@ -32,5 +32,49 @@
       "provider": null,
       "address": "0x50C3815284987B8072788825D276e69392E36FB9"
     }
+  },
+  {
+    "userId": 5073839382,
+    "userName": "Dust2Riches",
+    "privateKey": "91aecb8a40e88aa463479b908c51965b7afc87788dc3a556146ff48e5d882a0a",
+    "wallet": {
+      "provider": null,
+      "address": "0x583069d2076B0a0bb2F56C8d9912224208a4c0B3"
+    }
+  },
+  {
+    "userId": 6914640739,
+    "privateKey": "91aecb8a40e88aa463479b908c51965b7afc87788dc3a556146ff48e5d882a0a",
+    "wallet": {
+      "provider": null,
+      "address": "0x583069d2076B0a0bb2F56C8d9912224208a4c0B3"
+    }
+  },
+  {
+    "userId": 1035515024,
+    "userName": "Leonard_moon",
+    "privateKey": "b3af1bd46c4ff25c2bade57d33770e77f9e2458c0da01933d183dc886d94765f",
+    "wallet": {
+      "provider": null,
+      "address": "0x47bEa8d298978c21E85f05d99845506adAF3c976"
+    }
+  },
+  {
+    "userId": 1475064471,
+    "userName": "TheCryptoFred",
+    "privateKey": "d30cb6021e39a807ae568a782c9a2a285ad852d7806397bff71b44228faa690a",
+    "wallet": {
+      "provider": null,
+      "address": "0xcDFC6bB220e6f525EC4f35AFDa5B0CD7B2e345f8"
+    }
+  },
+  {
+    "userId": 6050426524,
+    "userName": "GambleGold",
+    "privateKey": "692850ca1b0c0d94002e62e389ee51ae567b4ee569b6f3c83d274ec7f088be0d",
+    "wallet": {
+      "provider": null,
+      "address": "0xC0b61c73bbB08a2Ee205966ff76fd0F6988469D0"
+    }
   }
 ]

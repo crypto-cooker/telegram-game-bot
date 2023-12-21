@@ -70,19 +70,20 @@ const bot = new TelegramBot(botToken!, {
   polling: true,
 });
 
-const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli/");
+const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
 
 let getUser: any;
 let channelId: any;
 let players: any;
 let cost: number;
 let losers: number;
-
+// let gameMsg: any;
 let player: string[] = [];
 let isPullTrigger = true;
 let isPass = true;
 let isSpin = true;
 const chambers: boolean[] = [];
+let gameMsg: any;
 let currentChamberIndex = 0;
 let turn = 0;
 let count = 0;
@@ -120,6 +121,22 @@ app.post("/post", (req, res) => {
     });
   } catch (error) {}
 });
+
+bot.setMyCommands([
+  {
+    command: "welcome",
+    description: "Setup Wallet bofore start game",
+  },
+  {
+    command: "revolver",
+    description:
+      "Start game, (usage: /revovler [members] [cost] [losers]). losers must be 1",
+  },
+  {
+    command: "help",
+    description: "How to play",
+  },
+]);
 
 bot.onText(/\/createinvitelink/, (msg) => {
   const chatId = msg.chat.id;
@@ -171,10 +188,18 @@ bot.onText(/\/start/, async (msg: Message) => {
   } catch (error) {}
 });
 
+bot.onText(/\/help/, async (msg: Message) => {
+  const sentMsg = await bot.sendMessage(
+    msg.chat.id,
+    "How to play\n /welcome: Setup wallet for playing game\n /revolver [members] [cost] [losers]\n Losers must be 1"
+  );
+});
+
 bot.on("message", async (msg: Message) => {
   const chatId = msg.chat.id;
   const messageId = msg.message_id;
   let sentMsg;
+
   // const groupId = msg.
 
   // const turn = getFirstPlayer(parseInt(msg.text!));
@@ -189,7 +214,7 @@ bot.on("message", async (msg: Message) => {
           [
             {
               text: "Wallet",
-              url: "https://t.me/gotgru_bot?start=establish",
+              url: "https://t.me/newRevolver_bot?start=establish",
             },
           ],
         ],
@@ -212,8 +237,9 @@ bot.on("message", async (msg: Message) => {
     if (userData?.userId === msg.from?.id) {
       player = [];
       player.push("@" + msg.from?.username!);
+      const pay = payForJoin(userData?.privateKey!, address, cost);
       players = parseInt(msg.text.split(" ")[1]);
-      cost = parseInt(msg.text.split(" ")[2]);
+      cost = parseFloat(msg.text.split(" ")[2]);
       losers = parseInt(msg.text.split(" ")[3]);
       bot.sendMessage(
         chatId,
@@ -241,6 +267,37 @@ bot.on("message", async (msg: Message) => {
       });
     }
   }
+
+  console.log("userId", chatId);
+  console.log("message", messageId);
+  if (gameMsg?.message_id) {
+    const countdownSeconds = 10;
+    let remainingSeconds = countdownSeconds;
+    setInterval(() => {
+      remainingSeconds--;
+      if (remainingSeconds > 0) {
+        console.log("remaing time", remainingSeconds);
+        bot.editMessageCaption(
+          `Playing Game\n Bullet was placed\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+            player[turn - 1]
+          }! Your turn for ${remainingSeconds}s...`,
+          {
+            chat_id: chatId,
+            message_id: gameMsg.message_id,
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: "Pull Trigger", callback_data: "shot" },
+                  { text: "Pass", callback_data: "pass" },
+                  { text: "Spin Chamber", callback_data: "spin" },
+                ],
+              ],
+            },
+          }
+        );
+      }
+    }, 1000);
+  }
 });
 
 bot.on("callback_query", async (query: CallbackQuery) => {
@@ -252,7 +309,8 @@ bot.on("callback_query", async (query: CallbackQuery) => {
   const userId = query.from.id;
   let sentMsg;
   const userData = fetchDataFromJSONFile(userId);
-
+  const countdownSeconds = 10;
+  let remainingSeconds = countdownSeconds;
   switch (action) {
     case "setup_wallet":
       // Set private key of user wallet
@@ -266,7 +324,8 @@ bot.on("callback_query", async (query: CallbackQuery) => {
         if (!isPlayer) {
           bot.sendMessage(chatId!, `@${username}! You already Joined!`);
         } else {
-          const pay = payForJoin(userData?.privateKey!, address, cost);
+          // const pay = payForJoin(userData?.privateKey!, address, cost);
+          const pay = true;
           if (!pay) {
             bot.sendMessage(
               chatId!,
@@ -288,6 +347,8 @@ bot.on("callback_query", async (query: CallbackQuery) => {
                 }
               );
               if (player.length === players) {
+                console.log("gamemessage", messageId);
+                // gameMsgId = messageId!;
                 bot.editMessageText(
                   `${player[0]}'s Game\n 🎮 Created Game!\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n😞 Losers: ${losers}\n Joined Player: ${player}\n All players already joined`,
                   {
@@ -298,7 +359,8 @@ bot.on("callback_query", async (query: CallbackQuery) => {
                 turn = getFirstPlayer(players);
                 const isBullet = initialChamber(chambers);
                 if (isBullet) {
-                  bot.sendDocument(
+                  console.log("userId", chatId);
+                  gameMsg = await bot.sendDocument(
                     chatId!,
                     "https://media.tenor.com/WBnU-Ltt26UAAAAM/it-starts-now-bebe-rexha.gif",
                     {
@@ -316,6 +378,31 @@ bot.on("callback_query", async (query: CallbackQuery) => {
                       },
                     }
                   );
+                  // console.log("gameMsg", gameMsg);
+                  // setInterval(() => {
+                  //   remainingSeconds--;
+                  //   if (remainingSeconds > 0) {
+                  //     console.log("remaing time", remainingSeconds);
+                  //     bot.editMessageCaption(
+                  //       `Playing Game\n Bullet was placed\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
+                  //         player[turn - 1]
+                  //       }! Your turn for ${remainingSeconds}s...`,
+                  //       {
+                  //         chat_id: chatId,
+                  //         message_id: gameMsg.message_id,
+                  //         reply_markup: {
+                  //           inline_keyboard: [
+                  //             [
+                  //               { text: "Pull Trigger", callback_data: "shot" },
+                  //               { text: "Pass", callback_data: "pass" },
+                  //               { text: "Spin Chamber", callback_data: "spin" },
+                  //             ],
+                  //           ],
+                  //         },
+                  //       }
+                  //     );
+                  //   }
+                  // }, 1000);
                 } else {
                   bot.sendDocument(
                     chatId!,
@@ -347,34 +434,6 @@ bot.on("callback_query", async (query: CallbackQuery) => {
       const nPlayer = passToNext(turn, players);
       const fired = pullTrigger(chambers, currentChamberIndex);
       currentChamberIndex = fired.currentChamberIndex;
-      // const replyMarkup: any = {
-      //   inline_keyboard: [[{ text: "Pull Trigger", callback_data: "shot" }]],
-      // };
-
-      // if (isSpin) {
-      //   replyMarkup.inline_keyboard.push({
-      //     text: "Spin Chamber",
-      //     callback_data: "spin",
-      //   });
-      // } else {
-      //   replyMarkup.inline_keyboard.push({
-      //     text: "Pass",
-      //     callback_data: "pass",
-      //   });
-      // }
-
-      // if (isPass) {
-      //   replyMarkup.inline_keyboard.push({
-      //     text: "Pass",
-      //     callback_data: "pass",
-      //   });
-      // } else {
-      //   replyMarkup.inline_keyboard.push({
-      //     text: "Spin Chamber",
-      //     callback_data: "spin",
-      //   });
-      // }
-
       if (fired.bulletFired) {
         if (isSpin && isPass) {
           bot.sendDocument(
@@ -474,7 +533,7 @@ bot.on("callback_query", async (query: CallbackQuery) => {
           console.log("all");
           bot.sendDocument(
             chatId!,
-            "https://media.tenor.com/FnRpM31R4KQAAAAj/i-exist-steve-terreberry.gif",
+            "https://tenor.com/view/im-still-alive-doctor-who-david-tennant-whovian-10th-gif-11094228",
             {
               caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
                 player[turn - 1]
@@ -495,7 +554,7 @@ bot.on("callback_query", async (query: CallbackQuery) => {
 
           bot.sendDocument(
             chatId!,
-            "https://media.tenor.com/FnRpM31R4KQAAAAj/i-exist-steve-terreberry.gif",
+            "https://tenor.com/view/im-still-alive-doctor-who-david-tennant-whovian-10th-gif-11094228",
             {
               caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
                 player[turn - 1]
@@ -515,7 +574,7 @@ bot.on("callback_query", async (query: CallbackQuery) => {
 
           bot.sendDocument(
             chatId!,
-            "https://media.tenor.com/FnRpM31R4KQAAAAj/i-exist-steve-terreberry.gif",
+            "https://tenor.com/view/im-still-alive-doctor-who-david-tennant-whovian-10th-gif-11094228",
             {
               caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
                 player[turn - 1]
@@ -536,7 +595,7 @@ bot.on("callback_query", async (query: CallbackQuery) => {
 
           bot.sendDocument(
             chatId!,
-            "https://media.tenor.com/FnRpM31R4KQAAAAj/i-exist-steve-terreberry.gif",
+            "https://tenor.com/view/im-still-alive-doctor-who-david-tennant-whovian-10th-gif-11094228",
             {
               caption: `Playing Game\n \n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
                 player[turn - 1]
@@ -823,6 +882,9 @@ bot.on("message", async (msg: Message) => {
   const chatId = msg.chat.id;
   const userId = msg.chat.username;
   const check = ValidateWalletPrivateKey(msg.text!);
+
+  console.log("chatId", chatId);
+  console.log("userId", userId, msg.from?.username);
 
   if (userId === msg.from?.username) {
     if (check) {
