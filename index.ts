@@ -267,37 +267,6 @@ bot.on("message", async (msg: Message) => {
       });
     }
   }
-
-  console.log("userId", chatId);
-  console.log("message", messageId);
-  if (gameMsg?.message_id) {
-    const countdownSeconds = 10;
-    let remainingSeconds = countdownSeconds;
-    setInterval(() => {
-      remainingSeconds--;
-      if (remainingSeconds > 0) {
-        console.log("remaing time", remainingSeconds);
-        bot.editMessageCaption(
-          `Playing Game\n Bullet was placed\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
-            player[turn - 1]
-          }! Your turn for ${remainingSeconds}s...`,
-          {
-            chat_id: chatId,
-            message_id: gameMsg.message_id,
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: "Pull Trigger", callback_data: "shot" },
-                  { text: "Pass", callback_data: "pass" },
-                  { text: "Spin Chamber", callback_data: "spin" },
-                ],
-              ],
-            },
-          }
-        );
-      }
-    }, 1000);
-  }
 });
 
 bot.on("callback_query", async (query: CallbackQuery) => {
@@ -324,8 +293,8 @@ bot.on("callback_query", async (query: CallbackQuery) => {
         if (!isPlayer) {
           bot.sendMessage(chatId!, `@${username}! You already Joined!`);
         } else {
-          // const pay = payForJoin(userData?.privateKey!, address, cost);
-          const pay = true;
+          const pay = payForJoin(userData?.privateKey!, address, cost);
+          // const pay = true;
           if (!pay) {
             bot.sendMessage(
               chatId!,
@@ -378,31 +347,6 @@ bot.on("callback_query", async (query: CallbackQuery) => {
                       },
                     }
                   );
-                  // console.log("gameMsg", gameMsg);
-                  // setInterval(() => {
-                  //   remainingSeconds--;
-                  //   if (remainingSeconds > 0) {
-                  //     console.log("remaing time", remainingSeconds);
-                  //     bot.editMessageCaption(
-                  //       `Playing Game\n Bullet was placed\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n ${
-                  //         player[turn - 1]
-                  //       }! Your turn for ${remainingSeconds}s...`,
-                  //       {
-                  //         chat_id: chatId,
-                  //         message_id: gameMsg.message_id,
-                  //         reply_markup: {
-                  //           inline_keyboard: [
-                  //             [
-                  //               { text: "Pull Trigger", callback_data: "shot" },
-                  //               { text: "Pass", callback_data: "pass" },
-                  //               { text: "Spin Chamber", callback_data: "spin" },
-                  //             ],
-                  //           ],
-                  //         },
-                  //       }
-                  //     );
-                  //   }
-                  // }, 1000);
                 } else {
                   bot.sendDocument(
                     chatId!,
@@ -517,7 +461,7 @@ bot.on("callback_query", async (query: CallbackQuery) => {
           payForD2R(reward.toVault);
           bot.sendDocument(
             chatId!,
-            "https://media.tenor.com/7EHHRFTVMYcAAAAM/congrats-congratulation.gif",
+            "https://tenor.com/FKQdj4BKGZ4AAAAd/congratulations-to-you-liza-miller.gif",
             {
               caption: `Game Finished\n 🎊🎊Congratulation🎉🎉 \n🤹‍♂️ Winners: ${player}\n🤑 Prize: Each player get $${reward.prize}\n`,
             }
