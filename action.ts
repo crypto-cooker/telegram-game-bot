@@ -4,6 +4,8 @@ import { ethers } from "ethers";
 import axios from "axios";
 
 const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli/");
+// const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
+
 const ETH_TO_WEI = 10 ** 18;
 const botWallet = process.env.PRIVATE_KEY;
 
@@ -85,7 +87,7 @@ export const pullTrigger = (
 };
 
 export const emptyCylinder = (chambers: boolean[]) => {
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 10; i++) {
     chambers[i] = false;
   }
 };
@@ -140,7 +142,7 @@ export const payForJoin = async (
       }
     }
   } catch (error) {
-    console.log("error", error);
+    // console.log("error", error);
   }
 };
 
@@ -208,11 +210,13 @@ export async function usdToEthereum(
     const response = await axios.get(
       "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
     );
+
+    // console.log("response", response);
     const ethereumPriceInUsd: number = response.data.ethereum.usd;
     const amountInEthereum: number = amountInUsd / ethereumPriceInUsd;
     return amountInEthereum;
   } catch (error) {
-    console.error("Error:", error);
+    // console.error("Error:", error);
     return null;
   }
 }
