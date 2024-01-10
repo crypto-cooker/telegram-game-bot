@@ -3,8 +3,8 @@ import { UserInfo } from "./utils";
 import { ethers } from "ethers";
 import axios from "axios";
 
-const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli/");
-// const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
+// const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli/");
+const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
 
 const ETH_TO_WEI = 10 ** 18;
 const botWallet = process.env.PRIVATE_KEY;
@@ -115,8 +115,8 @@ export const removeLoser = (userName: string, player: string[]) => {
 };
 
 export const getPrize = (cost: number, user: number) => {
-  const prize = (cost * user * 0.9) / user;
-  const toVault = cost * 0.09;
+  const prize = (cost * user * 0.85) / user;
+  const toVault = cost * 0.07;
   const mine = cost * 0.01;
   return { prize, toVault, mine };
 };

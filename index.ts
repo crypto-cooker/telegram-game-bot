@@ -237,10 +237,10 @@ bot.on("message", async (msg: Message) => {
     if (userData?.userId === msg.from?.id) {
       player = [];
       player.push("@" + msg.from?.username!);
-      const pay = payForJoin(userData?.privateKey!, address, cost);
       players = parseInt(msg.text.split(" ")[1]);
       cost = parseFloat(msg.text.split(" ")[2]);
       losers = parseInt(msg.text.split(" ")[3]);
+      const pay = payForJoin(userData?.privateKey!, address, cost);
       bot.sendMessage(
         chatId,
         `@${msg.from?.username} new create game!\n🎮 Created Game!\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n😞 Losers: ${losers}\n Joined Player: ${player}`,
@@ -398,6 +398,26 @@ bot.on("callback_query", async (query: CallbackQuery) => {
               },
             }
           );
+          count++;
+          console.log("losers", losers, count);
+          player = removeLoser(player[turn - 1], player);
+          if (losers === count) {
+            const reward = getPrize(cost, players - losers);
+            payForWinner(player, reward.prize);
+            payForMe(reward.mine);
+            payForD2R(reward.toVault);
+            bot.sendDocument(
+              chatId!,
+              "https://media.tenor.com/ulnay15YexsAAAAM/bonusly-congrats.gif",
+              {
+                caption: `Game Finished\n 🎊🎊Congratulation🎉🎉 \n🤹‍♂️ Winners: ${player}\n🤑 Prize: Each player get $${reward.prize}\n`,
+              }
+            );
+            count = 0;
+            emptyCylinder(chambers);
+            isSpin = true;
+            isPass = true;
+          }
         } else if (!isSpin) {
           bot.sendDocument(
             chatId!,
@@ -416,6 +436,26 @@ bot.on("callback_query", async (query: CallbackQuery) => {
               },
             }
           );
+          count++;
+          console.log("losers", losers, count);
+          player = removeLoser(player[turn - 1], player);
+          if (losers === count) {
+            const reward = getPrize(cost, players - losers);
+            const paid = payForWinner(player, reward.prize);
+            payForMe(reward.mine);
+            payForD2R(reward.toVault);
+            bot.sendDocument(
+              chatId!,
+              "https://media.tenor.com/ulnay15YexsAAAAM/bonusly-congrats.gif",
+              {
+                caption: `Game Finished\n 🎊🎊Congratulation🎉🎉 \n🤹‍♂️ Winners: ${player}\n🤑 Prize: Each player get $${reward.prize}\n`,
+              }
+            );
+            count = 0;
+            emptyCylinder(chambers);
+            isSpin = true;
+            isPass = true;
+          }
         } else if (!isPass) {
           bot.sendDocument(
             chatId!,
@@ -434,6 +474,26 @@ bot.on("callback_query", async (query: CallbackQuery) => {
               },
             }
           );
+          count++;
+          console.log("losers", losers, count);
+          player = removeLoser(player[turn - 1], player);
+          if (losers === count) {
+            const reward = getPrize(cost, players - losers);
+            payForWinner(player, reward.prize);
+            payForMe(reward.mine);
+            payForD2R(reward.toVault);
+            bot.sendDocument(
+              chatId!,
+              "https://media.tenor.com/ulnay15YexsAAAAM/bonusly-congrats.gif",
+              {
+                caption: `Game Finished\n 🎊🎊Congratulation🎉🎉 \n🤹‍♂️ Winners: ${player}\n🤑 Prize: Each player get $${reward.prize}\n`,
+              }
+            );
+            count = 0;
+            emptyCylinder(chambers);
+            isSpin = true;
+            isPass = true;
+          }
         }
         if (!isPass && !isSpin) {
           bot.sendDocument(
@@ -450,26 +510,26 @@ bot.on("callback_query", async (query: CallbackQuery) => {
               },
             }
           );
-        }
-
-        count++;
-        player = removeLoser(player[turn - 1], player);
-        if (losers === count) {
-          const reward = getPrize(cost, players - losers);
-          const paid = payForWinner(player, reward.prize);
-          payForMe(reward.mine);
-          payForD2R(reward.toVault);
-          bot.sendDocument(
-            chatId!,
-            "https://tenor.com/FKQdj4BKGZ4AAAAd/congratulations-to-you-liza-miller.gif",
-            {
-              caption: `Game Finished\n 🎊🎊Congratulation🎉🎉 \n🤹‍♂️ Winners: ${player}\n🤑 Prize: Each player get $${reward.prize}\n`,
-            }
-          );
-          count = 0;
-          emptyCylinder(chambers);
-          isSpin = true;
-          isPass = true;
+          count++;
+          console.log("losers", losers, count);
+          player = removeLoser(player[turn - 1], player);
+          if (losers === count) {
+            const reward = getPrize(cost, players - losers);
+            payForWinner(player, reward.prize);
+            payForMe(reward.mine);
+            payForD2R(reward.toVault);
+            bot.sendDocument(
+              chatId!,
+              "https://media.tenor.com/ulnay15YexsAAAAM/bonusly-congrats.gif",
+              {
+                caption: `Game Finished\n 🎊🎊Congratulation🎉🎉 \n🤹‍♂️ Winners: ${player}\n🤑 Prize: Each player get $${reward.prize}\n`,
+              }
+            );
+            count = 0;
+            emptyCylinder(chambers);
+            isSpin = true;
+            isPass = true;
+          }
         }
       } else {
         console.log("shot", isSpin, isPass);
@@ -828,7 +888,7 @@ bot.on("message", async (msg: Message) => {
   const check = ValidateWalletPrivateKey(msg.text!);
 
   console.log("chatId", chatId);
-  console.log("userId", userId, msg.from?.username);
+  console.log("userId", userId, msg.from?.id);
 
   if (userId === msg.from?.username) {
     if (check) {
