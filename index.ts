@@ -235,21 +235,40 @@ bot.on("message", async (msg: Message) => {
     emptyCylinder(chambers);
     const userData = fetchDataFromJSONFile(msg.from?.id!);
     if (userData?.userId === msg.from?.id) {
+      const countdownSeconds = 2;
+      let remainingSeconds = countdownSeconds;
       player = [];
       player.push("@" + msg.from?.username!);
       players = parseInt(msg.text.split(" ")[1]);
       cost = parseFloat(msg.text.split(" ")[2]);
       losers = parseInt(msg.text.split(" ")[3]);
-      const pay = payForJoin(userData?.privateKey!, address, cost);
-      bot.sendMessage(
-        chatId,
-        `@${msg.from?.username} new create game!\n🎮 Created Game!\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n😞 Losers: ${losers}\n Joined Player: ${player}`,
-        {
-          reply_markup: {
-            inline_keyboard: [[{ text: "Join", callback_data: `join_game` }]],
-          },
-        }
-      );
+      const pay = await payForJoin(userData?.privateKey!, address, cost);
+      console.log("pay status", pay);
+      if (!pay) {
+        bot.sendMessage(
+          chatId!,
+          `@${msg.from?.username}! You can't create Game. \nPlease deposit enough ETH`
+        );
+      } else {
+        bot.sendPhoto(chatId, "./gif/start.jpg", {
+          caption: `New Revolver Game Created. Have fun!`,
+        });
+        const countdownInterval = setInterval(() => {
+          remainingSeconds--;
+          clearInterval(countdownInterval);
+          bot.sendMessage(
+            chatId,
+            `@${msg.from?.username} new create game!\n🎮 Created Game!\n🤹‍♂️ Players: ${players}\n🤑 Cost: $${cost}\n😞 Losers: ${losers}\n Joined Player: ${player}`,
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Join", callback_data: `join_game` }],
+                ],
+              },
+            }
+          );
+        }, 1000);
+      }
     } else {
       channelId = msg.chat.username;
       bot.sendMessage(chatId, "setup wallet", {
@@ -295,6 +314,8 @@ bot.on("callback_query", async (query: CallbackQuery) => {
         } else {
           const pay = payForJoin(userData?.privateKey!, address, cost);
           // const pay = true;
+          console.log("join status", pay);
+
           if (!pay) {
             bot.sendMessage(
               chatId!,

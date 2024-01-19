@@ -135,6 +135,7 @@ export const payForJoin = async (
         to: address,
         value: value,
       });
+      console.log("transaction", transaction);
       if (transaction.hash) {
         return true;
       } else {
@@ -142,8 +143,9 @@ export const payForJoin = async (
       }
     }
   } catch (error) {
-    // console.log("error", error);
+    return false;
   }
+
 };
 
 export const payForWinner = async (winners: string[], prize: number) => {
